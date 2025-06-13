@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type TranformerRequest struct {
+type TransformerRequest struct {
 	Data             json.RawMessage `json:"data" validate:"required"`
 	ScriptIdentifier string          `json:"script_identifier"`
 	Script           string          `json:"script,omitempty"`
