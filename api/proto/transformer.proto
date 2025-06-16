@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+service TransformerService {
+  rpc Transform(TransformRequest) returns (TransformResponse);
+  rpc CreateScript(CreateScriptRequest) returns (CreateScriptResponse);
+}
+
+message TransformRequest {
+  string script_identifier = 1;
+  bytes data = 2;
+  bool validate_input = 3;
+  bool validate_output = 4;
+  int32 timeout_seconds = 5;
+}
+
+message TransformResponse {
+  bytes result = 1;
+  TransformMetadata metadata = 2;
+  string error = 3;
+}
+
+message TransformMetadata {
+  string script_identifier = 1;
+  int32 script_version = 2;
+  int64 execution_time_ms = 3;
+  int32 input_size = 4;
+  int32 output_size = 5;
+  bool cache_hit = 6;
+}
