@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// TODO: implement invalidation of compiled cache
 type CacheLayer struct {
 	scriptCache   *cache.Cache
 	compiledCache *sync.Map
@@ -19,13 +20,13 @@ func NewCacheLayer() *CacheLayer {
 	}
 }
 
-func (c *CacheLayer) GetScript(identifier string) (*models.TransformationScript, bool) {
+func (c *CacheLayer) GetScript(identifier string) (models.TransformationScript, bool) {
 	if script, found := c.scriptCache.Get(identifier); found {
-		return script.(*models.TransformationScript), found
+		return script.(models.TransformationScript), found
 	}
-	return nil, false
+	return models.TransformationScript{}, false
 }
-func (c *CacheLayer) SetScript(identifier string, script *models.TransformationScript) error {
+func (c *CacheLayer) SetScript(identifier string, script models.TransformationScript) error {
 	return c.scriptCache.Add(identifier, script, cache.DefaultExpiration)
 }
 

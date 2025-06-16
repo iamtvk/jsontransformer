@@ -8,14 +8,6 @@ import (
 	"github.com/iamtvk/jsontransformer/internal/models"
 )
 
-type ScriptRepository interface {
-	GetByIdentifier(ctx context.Context, identifier string) (*models.TransformationScript, error)
-	Create(ctx context.Context, script *models.TransformationScript) error
-	Update(ctx context.Context, script *models.TransformationScript) error
-	Delete(ctx context.Context, identifier string) error
-	List(ctx context.Context) []*models.TransformationScript
-}
-
 type PostgreSQLRepository struct {
 	db *sql.DB
 }
@@ -24,8 +16,7 @@ func NewPostgreSQLRepository(db *sql.DB) *PostgreSQLRepository {
 	return &PostgreSQLRepository{db: db}
 }
 
-// TODO: implement methods
-func (p *PostgreSQLRepository) GetByIdentifier(ctx context.Context, identifier string) (*models.TransformationScript, error) {
+func (p *PostgreSQLRepository) GetByIdentifier(ctx context.Context, identifier string) (models.TransformationScript, error) {
 	query := `
         SELECT id, identifier, name, script, description, 
                 created_at, updated_at, created_by
@@ -39,15 +30,15 @@ func (p *PostgreSQLRepository) GetByIdentifier(ctx context.Context, identifier s
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("script not found: %s", identifier)
+			return models.TransformationScript{}, fmt.Errorf("script not found: %s", identifier)
 		}
-		return nil, err
+		return models.TransformationScript{}, err
 	}
 
-	return &script, nil
+	return script, nil
 }
 
-func (p *PostgreSQLRepository) Create(ctx context.Context, script *models.TransformationScript) error {
+func (p *PostgreSQLRepository) Create(ctx context.Context, script models.TransformationScript) error {
 	query := `INSERT INTO transformation_scripts
 		(identifier, name, script, description, created_by)
 		VALUES ($1,$2,$3,$4,$5)
@@ -57,7 +48,7 @@ func (p *PostgreSQLRepository) Create(ctx context.Context, script *models.Transf
 	return err
 }
 
-func (p *PostgreSQLRepository) Update(ctx context.Context, script *models.TransformationScript) error {
+func (p *PostgreSQLRepository) Update(ctx context.Context, script models.TransformationScript) error {
 	query := `UPDATE transformation_scripts 
 	SET script = $2
 	WHERE identifier = $1`
@@ -71,8 +62,23 @@ func (p *PostgreSQLRepository) Delete(ctx context.Context, identifier string) er
 	return err
 }
 
-func (p *PostgreSQLRepository) List(ctx context.Context) []*models.TransformerRequest {
+func (p *PostgreSQLRepository) List(ctx context.Context) ([]models.TransformationScript, error) {
 	query := `SELECT id, identifier, name, script, description, 
                 created_at, updated_at, created_by
-	FROM transformation_scripts` // NOTE: complete query
+	FROM transformation_scripts`
+	rows, err := p.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var scripts []models.TransformationScript
+	for rows.Next() {
+		var script models.TransformationScript
+		err := rows.Scan(&script.ID, &script.Identifier, &script.Name, &script.Script, &script.Description, &script.CreatedAt, &script.UpdatedAt, &script.CreatedBy)
+		if err != nil {
+			return nil, err
+		}
+		scripts = append(scripts, script)
+	}
+	return scripts, nil
 }
