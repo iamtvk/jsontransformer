@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// TODO: Decide Validator Stratergy and create methods
 type Validator struct {
 }
 

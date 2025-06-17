@@ -44,7 +44,7 @@ func (s *TransformerService) Transform(ctx context.Context, req *models.Transfor
 	}
 	timeout := req.Timeout
 	if timeout == 0 {
-		timeout = s.config.DefaultTimeout
+		timeout = s.config.DefaultTransformTimeout
 	}
 	transformCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+package jsontransformer;
+option go_package = "api/proto/transformerPb";
+
 service TransformerService {
   rpc Transform(TransformRequest) returns (TransformResponse);
   rpc CreateScript(CreateScriptRequest) returns (CreateScriptResponse);
@@ -26,4 +29,18 @@ message TransformMetadata {
   int32 input_size = 4;
   int32 output_size = 5;
   bool cache_hit = 6;
+}
+
+message CreateScriptRequest {
+  string script_identifier = 1;
+  string script = 2;
+  bool validate_input = 3;
+  int32 timeout_seconds = 4;
+  string description = 5;
+  string created_by = 6;
+}
+
+message CreateScriptResponse {
+  bool success = 1;
+  string error = 2;
 }

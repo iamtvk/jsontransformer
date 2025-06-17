@@ -1,15 +1,22 @@
 package config
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 type Config struct {
-	DefaultTimeout time.Duration
-	DbUrl          string
+	DefaultTransformTimeout time.Duration
+	DbUrl                   string
+	HTTPPort                string
+	GRPCPort                string
 }
 
 func Load() *Config {
 	return &Config{
-		DefaultTimeout: time.Second,
-		DbUrl:          "localhost:6969",
+		DefaultTransformTimeout: 2 * time.Second,
+		DbUrl:                   os.Getenv("DB_URL"),
+		HTTPPort:                os.Getenv("HTTP_PORT"),
+		GRPCPort:                os.Getenv("GRPC_PORT"),
 	}
 }

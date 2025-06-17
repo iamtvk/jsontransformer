@@ -34,3 +34,12 @@ func (h *Handler) Transform(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/transform":
+		h.Transform(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
