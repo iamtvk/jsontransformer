@@ -12,6 +12,14 @@ type TransformerRequest struct {
 	Timeout          time.Duration   `json:"timeout,omitempty"`
 }
 
+type CreateScriptRequest struct {
+	ScriptIdentifier string `json:"script_identifier" validate:"required"`
+	Script           string `json:"script" validate:"required"`
+	CreatedBy        string `json:"created_by"`
+	Description      string `json:"description"`
+	Name             string `json:"name"`
+}
+
 type TransformerResponse struct {
 	Result   json.RawMessage     `json:"result"`
 	Error    *TransformerError   `json:"error"`
@@ -32,4 +40,9 @@ type TransformerMetadata struct {
 	InputSize        int           `json:"input_size"`
 	OutputSize       int           `json:"output_size"`
 	CacheHit         bool          `json:"cache_hit"`
+}
+
+type CreateScriptResponse struct {
+	Error   string `json:"error"`
+	Success bool   `json:"success"`
 }

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -17,6 +17,7 @@ import (
 	"github.com/iamtvk/jsontransformer/internal/service"
 	grpcTransport "github.com/iamtvk/jsontransformer/internal/transport/grpc"
 	httpTransport "github.com/iamtvk/jsontransformer/internal/transport/http"
+	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -40,31 +41,32 @@ func main() {
 	httpHandler := httpTransport.NewHandler(transformerService)
 	grpcServer := grpcTransport.NewServer(transformerService)
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startHttpServer(cfg.HTTPPort, httpHandler)
+		startHttpServer(ctx, cfg.HTTPPort, httpHandler)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startGRpcServer(cfg.GRPCPort, grpcServer)
+		startGRpcServer(ctx, cfg.GRPCPort, grpcServer)
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// sigChan := make(chan os.Signal, 1)
 	log.Printf("*** Application server started running, press CTRL C to shutdown ***")
-	<-sigChan
+	<-ctx.Done()
 
 	log.Printf("Shuting Down")
 	wg.Wait()
 	log.Printf("Shutdown complete")
 }
 
-func startHttpServer(port string, handler http.Handler) {
+func startHttpServer(ctx context.Context, port string, handler http.Handler) {
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      handler,
@@ -72,13 +74,22 @@ func startHttpServer(port string, handler http.Handler) {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
+	go func() {
+		<-ctx.Done()
+		log.Printf("Shutting down http server on port %s ...", port)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("http server shutdown error: %v", err)
+		}
+	}()
 	log.Printf("http server starting on port:%s ", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("http server failed to start: %v", err)
 	}
-
 }
-func startGRpcServer(port string, handler *grpcTransport.Server) {
+
+func startGRpcServer(ctx context.Context, port string, handler *grpcTransport.Server) {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("error starting grpc server on port: %s, error: %v", port, err)
@@ -90,6 +101,23 @@ func startGRpcServer(port string, handler *grpcTransport.Server) {
 	server := grpc.NewServer(opts...)
 	pb.RegisterTransformerServiceServer(server, handler)
 	reflection.Register(server)
+
+	go func() {
+		<-ctx.Done()
+		log.Printf("Shuttingdown gRPC server on port %s ...", port)
+		done := make(chan struct{})
+		go func() {
+			server.GracefulStop()
+			close(done)
+		}()
+		select {
+		case <-done:
+			log.Println("gRPC server shutdown gracefully")
+		case <-time.After(5 * time.Second):
+			log.Println("gRPC server shutdown shutdown timeout, forcing stop")
+			server.Stop()
+		}
+	}()
 	log.Printf("gRPC server starting on port: %s", port)
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("grpc server failed to start, error: %v", err)

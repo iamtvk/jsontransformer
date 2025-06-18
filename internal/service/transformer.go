@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	jsonata "github.com/blues/jsonata-go"
@@ -48,7 +49,7 @@ func (s *TransformerService) Transform(ctx context.Context, req *models.Transfor
 	}
 	transformCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	result, err := s.executeTransform(transformCtx, expr, &req.Data)
+	result, err := s.executeTransform(transformCtx, expr, req.Data)
 	if err != nil {
 		return nil, fmt.Errorf("error tranforming : %v", err)
 	}
@@ -82,28 +83,30 @@ func (s *TransformerService) getScript(ctx context.Context, identifier string) (
 }
 
 func (s *TransformerService) getCompiledExpression(script string) (*jsonata.Expr, bool, error) {
+	log.Println("called getcompile")
 	hash := sha256.Sum256([]byte(script)) // NOTE: if hashing is cheaper than compiling
 	scriptHash := hex.EncodeToString(hash[:])
 	if expr, found := s.cache.GetCompiledExpression(scriptHash); found {
 		return expr.(*jsonata.Expr), found, nil
 	}
-	expr, err := jsonata.Compile(script)
-	if err != nil {
-		return nil, false, err
-	}
+	expr := jsonata.MustCompile(script)
+	// if err != nil {
+	// 	log.Println("error compiling:", err.Error())
+	// 	return nil, false, err
+	// }
 	s.cache.SetCompiledExpression(scriptHash, expr)
 	return expr, false, nil
 }
 
-func (s *TransformerService) executeTransform(ctx context.Context, expr *jsonata.Expr, data *json.RawMessage) (json.RawMessage, error) {
+func (s *TransformerService) executeTransform(ctx context.Context, expr *jsonata.Expr, data json.RawMessage) (json.RawMessage, error) {
 	done := make(chan struct {
-		result *json.RawMessage
+		result json.RawMessage
 		err    error
 	}, 1)
 	go func() {
 		result, err := executeJSONataTransform(expr, data)
 		done <- struct {
-			result *json.RawMessage
+			result json.RawMessage
 			err    error
 		}{result, err}
 	}()
@@ -111,20 +114,25 @@ func (s *TransformerService) executeTransform(ctx context.Context, expr *jsonata
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case res := <-done:
-		return *res.result, res.err
+		return res.result, res.err
 	}
 }
 
-func executeJSONataTransform(expr *jsonata.Expr, data *json.RawMessage) (*json.RawMessage, error) {
+func executeJSONataTransform(expr *jsonata.Expr, data json.RawMessage) (json.RawMessage, error) {
 	output, err := expr.Eval(data)
 	if err != nil {
+		log.Println("executejsontranfrm: ", err.Error())
 		return nil, err
 	}
-	rawJson, ok := output.(*json.RawMessage)
-	if !ok {
+	log.Printf("output : %s", output)
+	bytes, err := json.Marshal(output)
+	raw := json.RawMessage(bytes)
+	log.Printf("raw mesg is %s", raw) // FIX:
+	if err != nil {
+		log.Println("executejsonat error rawjson conversion")
 		return nil, errors.New("")
 	}
-	return rawJson, nil
+	return raw, nil
 }
 
 func (s *TransformerService) CreateScript(ctx context.Context, script models.TransformationScript) error {

@@ -6,6 +6,7 @@ toolchain go1.23.10
 
 require (
 	github.com/blues/jsonata-go v1.5.4 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect

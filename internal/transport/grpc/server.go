@@ -45,7 +45,7 @@ func (s *Server) Transform(ctx context.Context, req *pb.TransformRequest) (*pb.T
 	return &pb.TransformResponse{
 		Result:   response.Result,
 		Metadata: &metadata,
-		Error:    response.Error.Message,
+		Error:    "",
 	}, nil
 }
 
@@ -58,11 +58,14 @@ func (s *Server) CreateScript(ctx context.Context, req *pb.CreateScriptRequest) 
 		CreatedBy:   req.GetCreatedBy(),
 	})
 	if err != nil {
-		return nil, err
+		return &pb.CreateScriptResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, err
 	}
 
 	return &pb.CreateScriptResponse{
 		Success: true,
-		Error:   err.Error(),
+		Error:   "",
 	}, nil
 }

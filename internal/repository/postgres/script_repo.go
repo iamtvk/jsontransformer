@@ -44,7 +44,7 @@ func (p *PostgreSQLRepository) Create(ctx context.Context, script models.Transfo
 		VALUES ($1,$2,$3,$4,$5)
 		RETURNING id, created_at, updated_at
 	`
-	err := p.db.QueryRowContext(ctx, query, script.Identifier, script.Name, script.Description, script.CreatedBy).Scan(&script.ID, &script.CreatedAt, &script.UpdatedAt)
+	err := p.db.QueryRowContext(ctx, query, script.Identifier, script.Name, script.Script, script.Description, script.CreatedBy).Scan(&script.ID, &script.CreatedAt, &script.UpdatedAt)
 	return err
 }
 
