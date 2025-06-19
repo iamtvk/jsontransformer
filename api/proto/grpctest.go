@@ -28,7 +28,7 @@ func main() {
 	// Example usage
 	resp, err := client.Transform(ctx, &transformerPb.TransformRequest{
 		ScriptIdentifier: "address-script-001",
-		Data: []byte(`
+		Data: []byte(`{
   "FirstName": "Fred",
   "Surname": "Smith",
   "Age": 28,

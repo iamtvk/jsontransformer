@@ -4,16 +4,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"time"
 
-	jsonata "github.com/blues/jsonata-go"
+	"github.com/goccy/go-json"
+
 	. "github.com/iamtvk/jsontransformer/internal/config"
 	"github.com/iamtvk/jsontransformer/internal/models"
 	"github.com/iamtvk/jsontransformer/internal/repository"
+	jsonata "github.com/xiatechs/jsonata-go"
 )
 
 type TransformerService struct {
@@ -83,7 +83,6 @@ func (s *TransformerService) getScript(ctx context.Context, identifier string) (
 }
 
 func (s *TransformerService) getCompiledExpression(script string) (*jsonata.Expr, bool, error) {
-	log.Println("called getcompile")
 	hash := sha256.Sum256([]byte(script)) // NOTE: if hashing is cheaper than compiling
 	scriptHash := hex.EncodeToString(hash[:])
 	if expr, found := s.cache.GetCompiledExpression(scriptHash); found {
@@ -119,18 +118,25 @@ func (s *TransformerService) executeTransform(ctx context.Context, expr *jsonata
 }
 
 func executeJSONataTransform(expr *jsonata.Expr, data json.RawMessage) (json.RawMessage, error) {
-	output, err := expr.Eval(data)
-	if err != nil {
-		log.Println("executejsontranfrm: ", err.Error())
+	var inData any
+	if err := json.Unmarshal([]byte(data), &inData); err != nil {
+		log.Println("raw data: ", string(data))
+		log.Println("failed to unmarshal input:", err)
 		return nil, err
 	}
-	log.Printf("output : %s", output)
+	output, err := expr.Eval(inData)
+	if err != nil {
+		log.Println("executejsontranfrm error: ", err.Error())
+		return nil, err
+	}
+	// output = output.(map[string]any)
+	// log.Printf("output : %v", output)
+	// log.Printf("expr in tranform : %s", expr.String())
 	bytes, err := json.Marshal(output)
 	raw := json.RawMessage(bytes)
-	log.Printf("raw mesg is %s", raw) // FIX:
 	if err != nil {
 		log.Println("executejsonat error rawjson conversion")
-		return nil, errors.New("")
+		return nil, err
 	}
 	return raw, nil
 }

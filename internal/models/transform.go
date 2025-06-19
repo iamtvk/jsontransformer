@@ -1,7 +1,7 @@
 package models
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"time"
 )
 
@@ -43,6 +43,7 @@ type TransformerMetadata struct {
 }
 
 type CreateScriptResponse struct {
-	Error   string `json:"error"`
-	Success bool   `json:"success"`
+	ScriptIdentifier string `json:"script_identifier"`
+	Error            string `json:"error"`
+	Success          bool   `json:"success"`
 }

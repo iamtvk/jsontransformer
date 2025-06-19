@@ -1,7 +1,7 @@
 package http
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"log"
 	"net/http"
 
@@ -36,7 +36,8 @@ func (h *Handler) TransformHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(response)
-	log.Println("tranform req fulfilled for", r.RemoteAddr)
+	log.Printf("transform successfull, identifier=%s, timetook=%dms, cache_hit=%v",
+		response.MetaData.ScriptIdentifier, response.MetaData.ExecutionTime.Microseconds(), response.MetaData.CacheHit)
 }
 
 func (h *Handler) CreateScriptHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,13 +57,13 @@ func (h *Handler) CreateScriptHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
-		resp := models.CreateScriptResponse{Error: err.Error(), Success: false}
+		resp := models.CreateScriptResponse{ScriptIdentifier: req.ScriptIdentifier, Error: err.Error(), Success: false}
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
-	resp := models.CreateScriptResponse{Error: "", Success: true}
+	resp := models.CreateScriptResponse{ScriptIdentifier: req.ScriptIdentifier, Error: "", Success: true}
 	json.NewEncoder(w).Encode(resp)
-	log.Println("create-script req fulfilled for", r.RemoteAddr)
+	log.Printf("create script req successfull, identifier=%s", resp.ScriptIdentifier)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
